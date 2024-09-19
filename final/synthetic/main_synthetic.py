@@ -11,7 +11,8 @@ import pandas as pd
 from openpyxl import load_workbook
 from synthesized_data import *
 from hsic_anova import *
-from L2x_regression import *
+from explainer.L2x_reg import *
+from explainer.invase_reg import InvaseFeatureImportance
 
 results_xsl = Path('synthesized_results.xlsx')
 
@@ -59,10 +60,21 @@ def Compare_methods(X, y, X_sample_no, fn, feature_imp):
     hsic_shap_mean_rank = np.mean(hsic_shap_avg_ranks)
 
     #L2X
-    L2X_scores = L2X(X, y, input_dim, len(feature_imp))
+    L2X_scores = L2X(X, y, X, input_dim, len(feature_imp))
     L2X_ranks = create_rank(L2X_scores)
     L2x_avg_ranks = np.mean(L2X_ranks[:,feature_imp], axis=1)
     L2x_mean_rank = np.mean(L2x_avg_ranks)
+
+    #Invasive
+    feature_names = [f"Feature_{i}" for i in range(X.shape[1])]
+    X_df = pd.DataFrame(X, columns=feature_names)
+    y_series = pd.Series(y, name="Target")
+    invase_model = InvaseFeatureImportance(n_epoch=1000)
+    invase_model.train_model(X_df, y_series)
+    invase_scores = invase_model.compute_feature_importance(X_df)
+    invase_rank = create_rank(invase_scores)
+    invase_avg_ranks = np.mean(invase_rank[:,feature_imp], axis=1)
+    invase_mean_rank = np.mean(invase_avg_ranks)
 
     ## SHAP
     explainer = shap.KernelExplainer(fn, X, l1_reg=False)
@@ -127,7 +139,7 @@ def Compare_methods(X, y, X_sample_no, fn, feature_imp):
     ushap_avg_ranks = np.mean(ushap_ranks[:,feature_imp], axis=1)
     ushap_mean_rank = np.mean(ushap_avg_ranks)
 
-    return [hsic_shap_avg_ranks, L2x_avg_ranks, shap_avg_ranks, sshap_avg_ranks, ushap_avg_ranks, bishap_avg_ranks, lime_avg_ranks, maple_avg_ranks]
+    return [hsic_shap_avg_ranks, L2x_avg_ranks, invase_avg_ranks,  shap_avg_ranks, sshap_avg_ranks, ushap_avg_ranks, bishap_avg_ranks, lime_avg_ranks, maple_avg_ranks]
 
 
 if __name__=='__main__':
@@ -155,7 +167,7 @@ if __name__=='__main__':
 
     all_results = Compare_methods(X, y, X_sample_no,  fn, feature_imp)
 
-    method_names = ['Hsic', 'L2X', 'Kernel SHAP', 'Sampling SHAP', 'Unbiased SHAP', 'Bivariate SHAP', 'LIME',  'MAPLE']
+    method_names = ['Hsic', 'L2X', 'invasive', 'Kernel SHAP', 'Sampling SHAP', 'Unbiased SHAP', 'Bivariate SHAP', 'LIME',  'MAPLE']
     # all_results = [shap_avg_ranks, sshap_avg_ranks, ushap_avg_ranks, bishap_avg_ranks, lime_avg_ranks, maple_avg_ranks]
 
     df = pd.DataFrame(all_results, index=method_names)
