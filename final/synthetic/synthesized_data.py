@@ -2,16 +2,17 @@ import numpy as np
 import random
 import matplotlib.pyplot as plt
 
-# Set seeds for reproducibility
-np.random.seed(0)
-random.seed(0)
+
+
+data_names=['Sine Log', 'Sine Cosine', 'Poly Sine', 'Squared Exponentials', 'Tanh Sine', 
+            'Trigonometric Exponential', 'Exponential Hyperbolic', 'XOR']
 
 def generate_X(n_samples=100, n_features=10):
     # Generate samples with a standard normal distribution
     return np.random.randn(n_samples, n_features)
 
 def generate_dataset_sinlog(n_samples=100, n_features=10, seed=42):
-    np.random.seed(seed)  # Set the seed for reproducibility
+    
     X = generate_X(n_samples, n_features)
 
     def fn(X):
@@ -37,7 +38,7 @@ def generate_dataset_sin(n_samples=100, n_features=10, noise=0.1, seed=42):
     Args:
         noise (float): Standard deviation of Gaussian noise to add to the output. 
     """
-    np.random.seed(seed)
+    
     X = generate_X(n_samples, n_features)
 
     def fn(X):
@@ -63,7 +64,7 @@ def generate_dataset_sin(n_samples=100, n_features=10, noise=0.1, seed=42):
     return X, y, fn, np.arange(0, 2), 'Sine Cosine'
 
 def generate_dataset_poly_sine(n_samples=100, n_features=10, seed=42):
-    np.random.seed(seed)
+    
     X = generate_X(n_samples, n_features)
 
     def fn(X):
@@ -79,7 +80,7 @@ def generate_dataset_poly_sine(n_samples=100, n_features=10, seed=42):
     return X, y, fn, np.arange(0, 2), 'Poly Sine'
 
 def generate_dataset_squared_exponentials(n_samples=100, n_features=10, seed=42):
-    np.random.seed(seed)
+    
     X = generate_X(n_samples, n_features)
 
     def fn(X):
@@ -94,24 +95,8 @@ def generate_dataset_squared_exponentials(n_samples=100, n_features=10, seed=42)
 
 # These functions are for more than 3 features
 
-def generate_dataset_XOR(n_samples=100, n_features=10, seed=42):
-    np.random.seed(seed)
-    X = generate_X(n_samples, n_features)
-
-    def fn(X):
-        f1, f2, f3, f4, f5 = X[:, 0], X[:, 1], X[:, 2], X[:, 3], X[:, 4]
-
-        # Compute the target using an XOR-like interaction of features
-        y = 0.5 * (np.exp(f1 * f2 * f3) + np.exp(f4 * f5))
-
-        return y
-
-    y = fn(X)
-    
-    return X, y, fn, np.arange(0, 5), 'XOR'
-
 def generate_dataset_complex_tanhsin(n_samples=1000, n_features=10, seed=42):
-    np.random.seed(seed)
+    
     X = generate_X(n_samples, n_features)
 
     def fn(X):
@@ -134,7 +119,7 @@ def generate_dataset_complex_tanhsin(n_samples=1000, n_features=10, seed=42):
     return X, y, fn, np.arange(0, 3), 'Tanh Sine'
 
 def generate_dataset_complex_trig_exp(n_samples=100, n_features=10, seed=42):
-    np.random.seed(seed)
+    
     X = generate_X(n_samples, n_features)
 
     def fn(X):
@@ -151,7 +136,7 @@ def generate_dataset_complex_trig_exp(n_samples=100, n_features=10, seed=42):
     return X, y, fn, np.arange(0, 4), 'Trigonometric Exponential'
 
 def generate_dataset_complex_exponential_hyperbolic(n_samples=100, n_features=10, seed=42):
-    np.random.seed(seed)
+    
     X = generate_X(n_samples, n_features)
 
     def fn(X):
@@ -166,3 +151,65 @@ def generate_dataset_complex_exponential_hyperbolic(n_samples=100, n_features=10
     y = fn(X)
     
     return X, y, fn, np.arange(0, 4), 'Exponential Hyperbolic'
+
+def generate_dataset_XOR(n_samples=100, n_features=10, seed=42):
+   
+    X = generate_X(n_samples, n_features)
+
+    def fn(X):
+        f1, f2, f3, f4, f5 = X[:, 0], X[:, 1], X[:, 2], X[:, 3], X[:, 4]
+
+        # Compute the target using an XOR-like interaction of features
+        y = 0.5 * (np.exp(f1 * f2 * f3) + np.exp(f4 * f5))
+
+        return y
+
+    y = fn(X)
+    
+    return X, y, fn, np.arange(0, 5), 'XOR'
+
+def generate_dataset(data_name, n_samples=100, n_features=10, seed = 0):
+    np.random.seed(seed)
+    if data_name == data_names[0]:
+         X, y, fn, feature_imp, _ = generate_dataset_sinlog(n_samples, n_features)
+    if data_name == data_names[1]:
+         X, y, fn, feature_imp, _ = generate_dataset_sin(n_samples, n_features)
+    if data_name == data_names[2]:
+         X, y, fn, feature_imp, _ = generate_dataset_poly_sine(n_samples, n_features)
+    if data_name == data_names[3]:
+         X, y, fn, feature_imp, _ = generate_dataset_squared_exponentials(n_samples, n_features)
+    if data_name == data_names[4]:
+        X, y, fn, feature_imp, _ = generate_dataset_complex_tanhsin(n_samples, n_features)
+    if data_name == data_names[5]:
+        X, y, fn, feature_imp, _ = generate_dataset_complex_trig_exp(n_samples, n_features)
+    if data_name == data_names[6]:
+        X, y, fn, feature_imp, _ = generate_dataset_complex_exponential_hyperbolic(n_samples, n_features)
+    if data_name == data_names[7]:
+        X, y, fn, feature_imp, _ = generate_dataset_XOR(n_samples, n_features)
+    
+    Ground_Truth = Ground_Truth_Generation(X, data_name)
+    return X, y, fn, feature_imp, Ground_Truth
+
+
+def Ground_Truth_Generation(X, data_name):
+
+    # Number of samples and features
+    n = len(X[:,0])
+    d = len(X[0,:])
+
+    # Output initialization
+    out = np.zeros([n,d])
+    
+    # Index
+    if (data_name in data_names[0:2]):        
+        out[:,:2] = 1
+    
+    elif(data_name in data_names[3:4]):        
+        out[:,:3] = 1
+    
+    elif(data_name in data_names[5:6]):        
+        out[:,:4] = 1
+    elif(data_name in data_names[7]):        
+        out[:,:5] = 1
+          
+    return out

@@ -222,7 +222,7 @@ class HSICNetGumbelSparsemax(nn.Module):
             # Compute kernels for the current sample
             for i in range(d):
                 dists = (x[i] - X_train[:, i]) ** 2
-                k = weights[i] * torch.exp(-dists / (2 * sigmas[i]**2))
+                k = weights[idx, i] * torch.exp(-dists / (2 * sigmas[i]**2))
                 anova_k *= (1 + k)
                 Ks[:, i] = k
             anova_k -= 1
@@ -295,7 +295,7 @@ class HSICNetGumbelSparsemax(nn.Module):
         dists = (y_train.unsqueeze(1) - y_train.unsqueeze(0)) ** 2
         k_y = torch.exp(-dists / (2 * sigma_y**2))
 
-        H = torch.eye(n).to(X.device)  # - (1 / n) * torch.ones(n, n).to(X.device)
+        H = torch.eye(n).to(X_train.device)  # - (1 / n) * torch.ones(n, n).to(X_train.device)
 
         # We define inclusive and noninclusive weights for value functions that inlcude/not-include the the corresponding feature
         inclusive_weights = torch.zeros(d, 1)

@@ -15,6 +15,7 @@ from explainer.L2x_reg import *
 from explainer.invase_reg import InvaseFeatureImportance
 
 results_xsl = Path('synthesized_results.xlsx')
+results_tpr_fpr = Path('tpr_fpr_results.xlsx')
 
 def create_rank(scores): 
 	"""
@@ -35,11 +36,33 @@ def create_rank(scores):
 
 	return np.array(ranks)
 
-def Compare_methods(X, y, X_sample_no, fn, feature_imp):
+def performance_metric(score, g_truth):
+
+        n = len(score)
+        Temp_TPR = np.zeros([n,])
+        Temp_FDR = np.zeros([n,])
+        
+        for i in range(n):
+    
+            # TPR    
+            TPR_Nom = np.sum(score[i,:] * g_truth[i,:])
+            TPR_Den = np.sum(g_truth[i,:])
+            Temp_TPR[i] = 100 * float(TPR_Nom)/float(TPR_Den+1e-8)
+        
+            # FDR
+            FDR_Nom = np.sum(score[i,:] * (1-g_truth[i,:]))
+            FDR_Den = np.sum(score[i,:])
+            Temp_FDR[i] = 100 * float(FDR_Nom)/float(FDR_Den+1e-8)
+    
+        return np.mean(Temp_TPR), np.mean(Temp_FDR), np.std(Temp_TPR), np.std(Temp_FDR)
+    
+
+def Compare_methods(X, y, X_test, X_sample_no, fn, feature_imp):
 
     #HSIC_anova
     X_tensor = torch.from_numpy(X).float()  # Convert to float tensor
     y_tensor = torch.from_numpy(y).float()
+    X_tensor_test = torch.from_numpy(X_test).float() 
     sigma_init_X = initialize_sigma_median_heuristic(X_tensor)
     sigma_init_Y = initialize_sigma_y_median_heuristic(y_tensor)
 
@@ -53,28 +76,32 @@ def Compare_methods(X, y, X_sample_no, fn, feature_imp):
     sigmas = gumbelsparsemax_model.sigmas
     sigma_y = gumbelsparsemax_model.sigma_y
     weights = gumbelsparsemax_model.importance_weights
-    l_shap_values, _ = gumbelsparsemax_model.instancewise_shapley_value(X_tensor,y_tensor, X_tensor, y_tensor,X_sample_no, sigmas, sigma_y, weights[0,:])
+    l_shap_values, _ = gumbelsparsemax_model.instancewise_shapley_value(X_tensor, y_tensor, X_tensor, y_tensor,X_sample_no, sigmas, sigma_y, weights)
     hsic_shap_values = l_shap_values.detach().cpu().numpy()
     hsic_shap_ranks = create_rank(hsic_shap_values.squeeze())
     hsic_shap_avg_ranks = np.mean(hsic_shap_ranks[:,feature_imp], axis=1)
     hsic_shap_mean_rank = np.mean(hsic_shap_avg_ranks)
+    # hsic_TPR_mean, hsic_FDR_mean, hsic_TPR_std, hsic_FDR_std = performance_metric(hsic_shap_values, g_test)
+    hsic_TPR_mean, hsic_FDR_mean, hsic_TPR_std, hsic_FDR_std = performance_metric(hsic_shap_values, g_train)
 
     #L2X
     L2X_scores = L2X(X, y, X, input_dim, len(feature_imp))
     L2X_ranks = create_rank(L2X_scores)
     L2x_avg_ranks = np.mean(L2X_ranks[:,feature_imp], axis=1)
     L2x_mean_rank = np.mean(L2x_avg_ranks)
+    L2x_TPR_mean, L2x_FDR_mean, L2x_TPR_std, L2x_FDR_std = performance_metric(L2X_scores, g_train)
 
     #Invasive
     feature_names = [f"Feature_{i}" for i in range(X.shape[1])]
     X_df = pd.DataFrame(X, columns=feature_names)
     y_series = pd.Series(y, name="Target")
     invase_model = InvaseFeatureImportance(n_epoch=1000)
-    invase_model.train_model(X_df, y_series)
+    invase_model.fit_model(X_df, y_series)
     invase_scores = invase_model.compute_feature_importance(X_df)
     invase_rank = create_rank(invase_scores)
     invase_avg_ranks = np.mean(invase_rank[:,feature_imp], axis=1)
     invase_mean_rank = np.mean(invase_avg_ranks)
+    invase_TPR_mean, invase_FDR_mean, invase_TPR_std, invase_FDR_std = performance_metric(invase_scores, g_train)
 
     ## SHAP
     explainer = shap.KernelExplainer(fn, X, l1_reg=False)
@@ -82,6 +109,8 @@ def Compare_methods(X, y, X_sample_no, fn, feature_imp):
     shap_ranks = create_rank(shap_values.squeeze())
     shap_avg_ranks = np.mean(shap_ranks[:,feature_imp], axis=1)
     shap_mean_rank = np.mean(shap_avg_ranks)
+    shap_TPR_mean, shap_FDR_mean, shap_TPR_std, shap_FDR_std = performance_metric(shap_values, g_train)
+
 
     ## Sampling SHAP
     sexplainer = shap.SamplingExplainer(fn, X, l1_reg=False)
@@ -89,6 +118,8 @@ def Compare_methods(X, y, X_sample_no, fn, feature_imp):
     sshap_ranks = create_rank(sshap_values.squeeze())
     sshap_avg_ranks = np.mean(sshap_ranks[:,feature_imp], axis=1)
     sshap_mean_rank = np.mean(sshap_avg_ranks)
+    sshap_TPR_mean, sshap_FDR_mean, sshap_TPR_std, sshap_FDR_std = performance_metric(sshap_values, g_train)
+
 
 
     # plt.boxplot([gem_avg_ranks, shap_avg_ranks, sshap_avg_ranks])
@@ -98,6 +129,8 @@ def Compare_methods(X, y, X_sample_no, fn, feature_imp):
     bishap_ranks = create_rank(np.array(bishap_values).squeeze())
     bishap_avg_ranks = np.mean(bishap_ranks[:,feature_imp], axis=1)
     bishap_mean_rank = np.mean(bishap_avg_ranks)
+    bishap_TPR_mean, bishap_FDR_mean, bishap_TPR_std, bishap_FDR_std = performance_metric(bishap_values, g_train)
+
 
 
     ## LIME, Unbiased SHAP, and MAPLE 
@@ -130,16 +163,27 @@ def Compare_methods(X, y, X_sample_no, fn, feature_imp):
     lime_ranks = create_rank(lime_values)
     lime_avg_ranks = np.mean(lime_ranks[:,feature_imp], axis=1)
     lime_mean_rank = np.mean(lime_avg_ranks)
+    lime_TPR_mean, lime_FDR_mean, lime_TPR_std, lime_FDR_std = performance_metric(lime_values, g_train)
+
 
     maple_ranks = create_rank(maple_values)
     maple_avg_ranks = np.mean(maple_ranks[:,feature_imp], axis=1)
     maple_mean_rank = np.mean(maple_avg_ranks)
+    maple_TPR_mean, maple_FDR_mean, maple_TPR_std, maple_FDR_std = performance_metric(maple_values, g_train)
 
     ushap_ranks = create_rank(ushap_values)
     ushap_avg_ranks = np.mean(ushap_ranks[:,feature_imp], axis=1)
     ushap_mean_rank = np.mean(ushap_avg_ranks)
+    ushap_TPR_mean, ushap_FDR_mean, ushap_TPR_std, ushap_FDR_std = performance_metric(ushap_values, g_train)
 
-    return [hsic_shap_avg_ranks, L2x_avg_ranks, invase_avg_ranks,  shap_avg_ranks, sshap_avg_ranks, ushap_avg_ranks, bishap_avg_ranks, lime_avg_ranks, maple_avg_ranks]
+
+    results = [hsic_shap_avg_ranks, L2x_avg_ranks, invase_avg_ranks,  shap_avg_ranks, sshap_avg_ranks, ushap_avg_ranks, bishap_avg_ranks, lime_avg_ranks, maple_avg_ranks]
+    tpr = [hsic_TPR_mean, L2x_TPR_mean, invase_TPR_mean, shap_TPR_mean, sshap_TPR_mean, ushap_TPR_mean, bishap_TPR_mean, lime_TPR_mean, maple_TPR_mean ]
+    fdr = [hsic_FDR_mean, L2x_FDR_mean, invase_FDR_mean, shap_FDR_mean, sshap_FDR_mean, ushap_FDR_mean, bishap_FDR_mean, lime_FDR_mean, maple_FDR_mean ]
+
+    print('TPR mean: ' + str(np.round(hsic_TPR_mean,1)) + '\%, ' + 'TPR std: ' + str(np.round(hsic_TPR_std,1)) + '\%, '  )
+    print('FDR mean: ' + str(np.round(hsic_FDR_mean,1)) + '\%, ' + 'FDR std: ' + str(np.round(hsic_FDR_std,1)) + '\%, '  )
+    return results , tpr, fdr
 
 
 if __name__=='__main__':
@@ -150,37 +194,43 @@ if __name__=='__main__':
     input_dim = 4 # number of features for the synthesized instances
     hidden_dim1 = 100
     hidden_dim2 = 100
+    train_seed = 0
+    test_seed = 1
 
-    
+    data_sets=['Sine Log', 'Sine Cosine', 'Poly Sine', 'Squared Exponentials', 'Tanh Sine', 
+            'Trigonometric Exponential', 'Exponential Hyperbolic', 'XOR']
+    ds_name = data_sets[1]
+
     # Generate synthetic data
-    X, y, fn, feature_imp, ds_name = generate_dataset_sin(num_samples, input_dim)
-    # X, y, fn, feature_imp, ds_name =generate_dataset_sinlog(num_samples, input_dim)
-    # X, y, fn, feature_imp, ds_name = generate_dataset_poly_sine(num_samples, input_dim)
-    # X, y, fn, feature_imp, ds_name = generate_dataset_squared_exponentials(num_samples, input_dim)
+    X_train, y_train, fn, feature_imp, g_train = generate_dataset(ds_name, num_samples, input_dim, train_seed)
+    X_test, y_test, fn, feature_imp, g_test = generate_dataset(ds_name, num_samples, input_dim, test_seed)
+    
+    all_results, tpr, fpr = Compare_methods(X_train, y_train, X_test, X_sample_no,  fn, feature_imp)
 
-    ## we should give more than 3 features
-
-    # X, y, fn, feature_imp, ds_name = generate_dataset_XOR(num_samples, input_dim)
-    # X, y, fn, feature_imp, ds_name = generate_dataset_complex_tanhsin(num_samples, input_dim)
-    # X, y, fn, feature_imp, ds_name = generate_dataset_complex_trig_exp(num_samples, input_dim)
-    # X, y, fn, feature_imp, ds_name = generate_dataset_complex_exponential_hyperbolic(num_samples, input_dim)
-
-    all_results = Compare_methods(X, y, X_sample_no,  fn, feature_imp)
-
-    method_names = ['Hsic', 'L2X', 'invasive', 'Kernel SHAP', 'Sampling SHAP', 'Unbiased SHAP', 'Bivariate SHAP', 'LIME',  'MAPLE']
-    # all_results = [shap_avg_ranks, sshap_avg_ranks, ushap_avg_ranks, bishap_avg_ranks, lime_avg_ranks, maple_avg_ranks]
+    method_names = ['Hsic', 'L2X', 'invasive', 'Kernel SHAP', 'Sampling SHAP', 'Unbiased SHAP', 'Bivariate SHAP', 'LIME', 'MAPLE']
 
     df = pd.DataFrame(all_results, index=method_names)
 
-    mode = 'a' if results_xsl.exists() else 'w'
-    with pd.ExcelWriter(results_xsl, engine='openpyxl', mode=mode) as writer:
-        # if results_xsl.exists():
-        #     results_xsl.unlink() 
+    if not os.path.exists(results_xsl):
+        with pd.ExcelWriter(results_xsl, mode='w', engine='openpyxl') as writer:
+            df.to_excel(writer, sheet_name=ds_name, index_label='Method')
+    else:
+        with pd.ExcelWriter(results_xsl, mode='a', engine='openpyxl', if_sheet_exists='replace') as writer:
+            df.to_excel(writer, sheet_name=ds_name, index_label='Method')
     
-        # Write each DataFrame to a specific sheet
-        
-        df.to_excel(writer, sheet_name=ds_name, index_label='Method')
+    results_tpr_fpr_df = pd.DataFrame({
+        'FPR': fpr,
+        'TPR': tpr,
+    } , index=method_names
+    )
 
+
+    if not os.path.exists(results_tpr_fpr):
+        with pd.ExcelWriter(results_tpr_fpr, mode='w', engine='openpyxl') as writer:
+            results_tpr_fpr_df.to_excel(writer, sheet_name=ds_name, index_label='Method')
+    else:
+        with pd.ExcelWriter(results_tpr_fpr, mode='a', engine='openpyxl', if_sheet_exists='replace') as writer:
+            results_tpr_fpr_df.to_excel(writer, sheet_name=ds_name, index_label='Method')
     print("done!")
 
     # plt.boxplot([shap_avg_ranks, bishap_avg_ranks, sshap_avg_ranks, ushap_avg_ranks, lime_avg_ranks, maple_avg_ranks])
