@@ -38,23 +38,23 @@ def create_rank(scores):
 
 def performance_metric(score, g_truth):
 
-        n = len(score)
-        Temp_TPR = np.zeros([n,])
-        Temp_FDR = np.zeros([n,])
-        
-        for i in range(n):
+    n = len(score)
+    TPR = np.zeros([n,])
+    FDR = np.zeros([n,])
     
-            # TPR    
-            TPR_Nom = np.sum(score[i,:] * g_truth[i,:])
-            TPR_Den = np.sum(g_truth[i,:])
-            Temp_TPR[i] = 100 * float(TPR_Nom)/float(TPR_Den+1e-8)
-        
-            # FDR
-            FDR_Nom = np.sum(score[i,:] * (1-g_truth[i,:]))
-            FDR_Den = np.sum(score[i,:])
-            Temp_FDR[i] = 100 * float(FDR_Nom)/float(FDR_Den+1e-8)
+    for i in range(n):
+
+        # TPR    
+        TP_vals = np.sum(score[i,:] * g_truth[i,:])
+        TPR_den = np.sum(g_truth[i,:])
+        TPR[i] = 100 * float(TP_vals)/float(TPR_den)
     
-        return np.mean(Temp_TPR), np.mean(Temp_FDR), np.std(Temp_TPR), np.std(Temp_FDR)
+        # FDR
+        FD_vals = np.sum(score[i,:] * (1-g_truth[i,:]))
+        FDR_den = np.sum(score[i,:])
+        FDR[i] = 100 * float(FD_vals)/float(FDR_den)
+
+    return np.mean(TPR), np.mean(FDR), np.std(TPR), np.std(FDR)
     
 
 def Compare_methods(X, y, X_test, X_sample_no, fn, feature_imp):
@@ -186,6 +186,7 @@ def Compare_methods(X, y, X_test, X_sample_no, fn, feature_imp):
     return results , tpr, fdr
 
 
+
 if __name__=='__main__':
 
     X_sample_no = 100  # number of sampels for generating explanation
@@ -194,7 +195,7 @@ if __name__=='__main__':
     input_dim = 4 # number of features for the synthesized instances
     hidden_dim1 = 100
     hidden_dim2 = 100
-    train_seed = 0
+    train_seed = 42
     test_seed = 1
 
     data_sets=['Sine Log', 'Sine Cosine', 'Poly Sine', 'Squared Exponentials', 'Tanh Sine', 
@@ -203,21 +204,27 @@ if __name__=='__main__':
 
     # Generate synthetic data
     X_train, y_train, fn, feature_imp, g_train = generate_dataset(ds_name, num_samples, input_dim, train_seed)
-    X_test, y_test, fn, feature_imp, g_test = generate_dataset(ds_name, num_samples, input_dim, test_seed)
+    # X_test, y_test, fn, feature_imp, g_test = generate_dataset(ds_name, num_samples, input_dim, test_seed)
     
-    all_results, tpr, fpr = Compare_methods(X_train, y_train, X_test, X_sample_no,  fn, feature_imp)
+    all_results, tpr, fpr = Compare_methods(X_train, y_train, X_train, X_sample_no,  fn, feature_imp)
+
 
     method_names = ['Hsic', 'L2X', 'invasive', 'Kernel SHAP', 'Sampling SHAP', 'Unbiased SHAP', 'Bivariate SHAP', 'LIME', 'MAPLE']
 
     df = pd.DataFrame(all_results, index=method_names)
 
-    if not os.path.exists(results_xsl):
-        with pd.ExcelWriter(results_xsl, mode='w', engine='openpyxl') as writer:
+    # if not os.path.exists(results_xsl):
+    #     with pd.ExcelWriter(results_xsl, mode='w', engine='openpyxl') as writer:
+    #         df.to_excel(writer, sheet_name=ds_name, index_label='Method')
+    # else:
+    #     with pd.ExcelWriter(results_xsl, mode='a', engine='openpyxl', if_sheet_exists='new') as writer:
+    #         df.to_excel(writer, sheet_name=ds_name, index_label='Method')
+
+    if os.path.exists(results_xsl):
+        os.remove(results_xsl)
+    with pd.ExcelWriter(results_xsl, mode='w', engine='openpyxl') as writer:
             df.to_excel(writer, sheet_name=ds_name, index_label='Method')
-    else:
-        with pd.ExcelWriter(results_xsl, mode='a', engine='openpyxl', if_sheet_exists='replace') as writer:
-            df.to_excel(writer, sheet_name=ds_name, index_label='Method')
-    
+   
     results_tpr_fpr_df = pd.DataFrame({
         'FPR': fpr,
         'TPR': tpr,
@@ -225,12 +232,11 @@ if __name__=='__main__':
     )
 
 
-    if not os.path.exists(results_tpr_fpr):
-        with pd.ExcelWriter(results_tpr_fpr, mode='w', engine='openpyxl') as writer:
-            results_tpr_fpr_df.to_excel(writer, sheet_name=ds_name, index_label='Method')
-    else:
-        with pd.ExcelWriter(results_tpr_fpr, mode='a', engine='openpyxl', if_sheet_exists='replace') as writer:
-            results_tpr_fpr_df.to_excel(writer, sheet_name=ds_name, index_label='Method')
+    if os.path.exists(results_tpr_fpr):
+        os.remove(results_tpr_fpr)
+    with pd.ExcelWriter(results_tpr_fpr, mode='w', engine='openpyxl') as writer:
+            results_tpr_fpr_df.to_excel(writer, sheet_name = ds_name, index_label='Method')
+    
     print("done!")
 
     # plt.boxplot([shap_avg_ranks, bishap_avg_ranks, sshap_avg_ranks, ushap_avg_ranks, lime_avg_ranks, maple_avg_ranks])
