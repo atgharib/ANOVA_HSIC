@@ -18,7 +18,7 @@ from invase import INVASE
 from sklearn.linear_model import LinearRegression
 
 
-# Create a wrapper class for 'fn' with a 'predict' method
+# Create a wrapper class for 'fn' 
 class CustomModel:
     def __init__(self, fn):
         self.fn = fn
