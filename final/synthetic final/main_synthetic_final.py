@@ -263,7 +263,7 @@ def Compare_methods(X, y, X_test, X_sample_no, fn, feature_imp):
     bishap_avg_ranks = np.mean(bishap_ranks[:,feature_imp], axis=1)
     bishap_mean_rank = np.mean(bishap_avg_ranks)
     normalized_bishap_values= abs(bishap_values) / abs(bishap_values).sum(axis=1, keepdims=True)
-    bishap_impfeatures_existence = create_important_features_existence(shap_ranks, g_train)
+    bishap_impfeatures_existence = create_important_features_existence(bishap_ranks, g_train)
     bishap_TPR_mean, bishap_FDR_mean, bishap_TPR_std, bishap_FDR_std, bishap_TP, bishap_FD = performance_metric(bishap_impfeatures_existence, g_train)
 
 
@@ -299,7 +299,7 @@ def Compare_methods(X, y, X_test, X_sample_no, fn, feature_imp):
     lime_avg_ranks = np.mean(lime_ranks[:,feature_imp], axis=1)
     lime_mean_rank = np.mean(lime_avg_ranks)
     normalized_lime_values= abs(lime_values) / abs(lime_values).sum(axis=1, keepdims=True)
-    lime_impfeatures_existence = create_important_features_existence(shap_ranks, g_train)
+    lime_impfeatures_existence = create_important_features_existence(lime_ranks, g_train)
     lime_TPR_mean, lime_FDR_mean, lime_TPR_std, lime_FDR_std, lime_TP, lime_FD = performance_metric(lime_impfeatures_existence, g_train)
 
 
@@ -307,14 +307,14 @@ def Compare_methods(X, y, X_test, X_sample_no, fn, feature_imp):
     maple_avg_ranks = np.mean(maple_ranks[:,feature_imp], axis=1)
     maple_mean_rank = np.mean(maple_avg_ranks)
     normalized_maple_values= abs(maple_values) / abs(maple_values).sum(axis=1, keepdims=True)
-    maple_impfeatures_existence = create_important_features_existence(shap_ranks, g_train)
+    maple_impfeatures_existence = create_important_features_existence(maple_ranks, g_train)
     maple_TPR_mean, maple_FDR_mean, maple_TPR_std, maple_FDR_std, maple_TP, maple_FD = performance_metric(maple_impfeatures_existence, g_train)
 
     ushap_ranks = create_rank(ushap_values)
     ushap_avg_ranks = np.mean(ushap_ranks[:,feature_imp], axis=1)
     ushap_mean_rank = np.mean(ushap_avg_ranks)
     normalized_ushap_values= abs(ushap_values) / abs(ushap_values).sum(axis=1, keepdims=True)
-    ushap_impfeatures_existence = create_important_features_existence(shap_ranks, g_train)
+    ushap_impfeatures_existence = create_important_features_existence(ushap_ranks, g_train)
     ushap_TPR_mean, ushap_FDR_mean, ushap_TPR_std, ushap_FDR_std, ushap_TP, ushap_FD = performance_metric(ushap_impfeatures_existence, g_train)
 
 
