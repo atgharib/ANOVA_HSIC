@@ -54,7 +54,7 @@ class Sample_Concrete(Layer):
     def compute_output_shape(self, input_shape):
         return input_shape
 
-def L2X(X, y, X_test, input_shape, num_feature_imp):
+def L2X(X, y, input_shape, num_feature_imp):
    
     activation = 'relu'
     tau = 0.1
@@ -94,8 +94,8 @@ def L2X(X, y, X_test, input_shape, num_feature_imp):
     pred_model = Model(model_input, samples)
     pred_model.compile(loss=None, optimizer='rmsprop')
 
-    scores = pred_model.predict(X_test, verbose=1, batch_size=BATCH_SIZE)
+   
 
-    return scores
+    return pred_model
 
   

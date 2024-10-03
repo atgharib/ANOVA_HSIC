@@ -14,6 +14,7 @@ from hsic_gumbelsparsemax import *
 from hsic_gumbelsoftmax import *
 from hsic_sparsemax import *
 from explainer.L2x_reg import *
+from explainer.invase_reg import InvaseFeatureImportance
 from invase import INVASE
 from sklearn.linear_model import LinearRegression
 
@@ -263,7 +264,7 @@ def Compare_methods(X, y, X_test, X_sample_no, fn, feature_imp):
     bishap_avg_ranks = np.mean(bishap_ranks[:,feature_imp], axis=1)
     bishap_mean_rank = np.mean(bishap_avg_ranks)
     normalized_bishap_values= abs(bishap_values) / abs(bishap_values).sum(axis=1, keepdims=True)
-    bishap_impfeatures_existence = create_important_features_existence(shap_ranks, g_train)
+    bishap_impfeatures_existence = create_important_features_existence(bishap_ranks, g_train)
     bishap_TPR_mean, bishap_FDR_mean, bishap_TPR_std, bishap_FDR_std, bishap_TP, bishap_FD = performance_metric(bishap_impfeatures_existence, g_train)
 
 
@@ -299,7 +300,7 @@ def Compare_methods(X, y, X_test, X_sample_no, fn, feature_imp):
     lime_avg_ranks = np.mean(lime_ranks[:,feature_imp], axis=1)
     lime_mean_rank = np.mean(lime_avg_ranks)
     normalized_lime_values= abs(lime_values) / abs(lime_values).sum(axis=1, keepdims=True)
-    lime_impfeatures_existence = create_important_features_existence(shap_ranks, g_train)
+    lime_impfeatures_existence = create_important_features_existence(lime_ranks, g_train)
     lime_TPR_mean, lime_FDR_mean, lime_TPR_std, lime_FDR_std, lime_TP, lime_FD = performance_metric(lime_impfeatures_existence, g_train)
 
 
@@ -307,14 +308,14 @@ def Compare_methods(X, y, X_test, X_sample_no, fn, feature_imp):
     maple_avg_ranks = np.mean(maple_ranks[:,feature_imp], axis=1)
     maple_mean_rank = np.mean(maple_avg_ranks)
     normalized_maple_values= abs(maple_values) / abs(maple_values).sum(axis=1, keepdims=True)
-    maple_impfeatures_existence = create_important_features_existence(shap_ranks, g_train)
+    maple_impfeatures_existence = create_important_features_existence(maple_ranks, g_train)
     maple_TPR_mean, maple_FDR_mean, maple_TPR_std, maple_FDR_std, maple_TP, maple_FD = performance_metric(maple_impfeatures_existence, g_train)
 
     ushap_ranks = create_rank(ushap_values)
     ushap_avg_ranks = np.mean(ushap_ranks[:,feature_imp], axis=1)
     ushap_mean_rank = np.mean(ushap_avg_ranks)
     normalized_ushap_values= abs(ushap_values) / abs(ushap_values).sum(axis=1, keepdims=True)
-    ushap_impfeatures_existence = create_important_features_existence(shap_ranks, g_train)
+    ushap_impfeatures_existence = create_important_features_existence(ushap_ranks, g_train)
     ushap_TPR_mean, ushap_FDR_mean, ushap_TPR_std, ushap_FDR_std, ushap_TP, ushap_FD = performance_metric(ushap_impfeatures_existence, g_train)
 
 
@@ -339,21 +340,20 @@ def Compare_methods(X, y, X_test, X_sample_no, fn, feature_imp):
 if __name__=='__main__':
 
     
-    num_samples = 1000 # number of generated synthesized instances 
+    num_samples = 400 # number of generated synthesized instances 
     input_dim = 10 # number of features for the synthesized instances
     hidden_dim1 = 100
     hidden_dim2 = 100
-    X_sample_no = 500  # number of sampels for generating explanation
+    X_sample_no = 200  # number of sampels for generating explanation
     train_seed = 42
     test_seed = 1
-    Threshold = 0.01
+    Threshold = 0.001
 
    
-    # data_sets=['Sine Log', 'Sine Cosine', 'Poly Sine', 'Squared Exponentials', 'Tanh Sine', 
-    #          'Trigonometric Exponential', 'Exponential Hyperbolic', 'XOR', 'Syn4']
-    # ds_name = data_sets[1]
+    data_sets=['Sine Log', 'Sine Cosine', 'Poly Sine', 'Squared Exponentials', 'Tanh Sine', 
+            'Trigonometric Exponential', 'Exponential Hyperbolic', 'XOR', 'Syn4']
+    ds_name = data_sets[1]
     # data_sets= ['Syn4']
-    data_sets=['Sine Log']
 
     for ds_name in data_sets:
 
@@ -370,8 +370,8 @@ if __name__=='__main__':
             os.makedirs(folder_path)
 
         # Combine folder path and filename
-        results_xsl = os.path.join(folder_path, f"results_{ds_name}.xlsx")
-        results_tpr_fpr = os.path.join(folder_path, f"tpr_fpr_{ds_name}.xlsx")
+        results_xsl = os.path.join(folder_path, f"results_{ds_name}_tr={Threshold}.xlsx")
+        results_tpr_fpr = os.path.join(folder_path, f"tpr_fpr_{ds_name}_tr={Threshold}.xlsx")
         
 
         df = pd.DataFrame(all_results, index=method_names)

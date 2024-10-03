@@ -14,7 +14,7 @@ import torch.optim as optim
 from torch.utils.data import DataLoader, TensorDataset
 from sparsemax import Sparsemax
 import math
-from synthesized_data import *
+
 
 
 """## Training a network with maximizing HSIC with sparsemax"""
@@ -53,6 +53,10 @@ class HSICNetSparseMax(nn.Module):
         Returns:
         - Kernel matrix for inputs X1 and X2
         """
+        ##*******
+        # sigmas = 0.1 *torch.ones(X1.size(1))
+        ##*******
+
         prod = torch.ones((X1.size(0), X2.size(0)))
         for i in range(X1.size(1)):  # iterate over features
             dists = (X1[:, i].unsqueeze(1) - X2[:, i].unsqueeze(0)) ** 2
@@ -85,7 +89,7 @@ class HSICNetSparseMax(nn.Module):
         return hsic_value
 
     # Training function
-    def train_model(self, X, y, num_epochs=300, lr=1e-3, BATCH_SIZE = 1000):
+    def train_model(self, X, y, num_epochs=1000, lr=1e-3, BATCH_SIZE = 1000):
         
         optimizer = optim.Adam(self.parameters(), lr=lr)
         train_dataset = TensorDataset(X, y)
@@ -106,7 +110,7 @@ class HSICNetSparseMax(nn.Module):
                     print(f"Epoch {epoch + 1}/{num_epochs}, Loss: {loss.item()}")
 
      
-    def instancewise_shapley_value(self, X_train, y_train, X_samples, y_samples, num_samples, sigmas, sigma_y, weights):
+    def instancewise_shapley_value(self, X_train, y_train, X_samples, y_samples, sigmas, sigma_y, weights):
         n, d = X_train.shape
         n_samples = X_samples.shape[0]
 
@@ -137,7 +141,7 @@ class HSICNetSparseMax(nn.Module):
 
             # Compute Shapley values for the current sample
             for i in range(d):
-                sv[idx, i], k_x_tilde = self.instancewise_sv_dim(Ks, k_y, k_x_avg, k_y_avg, i, num_samples)
+                sv[idx, i], k_x_tilde = self.instancewise_sv_dim(Ks, k_y, k_x_avg, k_y_avg, i, n)
             
             # Compute HSIC for the current sample
             hsic_values[idx] = (anova_k - k_x_avg) @ (k_y - k_y_avg)
@@ -251,6 +255,18 @@ class HSICNetSparseMax(nn.Module):
         sv_i = torch.trace(H @ k_tilde @ H @ k_y) / (n - 1) ** 2
 
         return sv_i, k_tilde, dp
+    
+    def predict(self, X):
+        """
+       
+        Returns:
+            torch.Tensor: Predicted importance weights for each feature.
+        """
+        self.eval()  # Set the model to evaluation mode
+        with torch.no_grad():  # Disable gradient computation
+            importance_weights, sigmas, sigma_y = self(X)  # Forward pass
+        
+        return importance_weights, sigmas, sigma_y
 
 def initialize_sigma_median_heuristic(X):
         """

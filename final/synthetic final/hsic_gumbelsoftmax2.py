@@ -14,11 +14,11 @@ class HSICNetGumbelSoftmax(nn.Module):
         super(HSICNetGumbelSoftmax, self).__init__()
         self.input_dim = input_dim
         self. hidden_dim1 = hidden_dim1
-        self. hidden_dim2 = hidden_dim2
+        # self. hidden_dim2 = hidden_dim2
         self.num_sampling = num_sampling
         self.fc1 = nn.Linear(input_dim, hidden_dim1)
-        self.fc2 = nn.Linear(hidden_dim1, hidden_dim2)
-        self.fc3 = nn.Linear(hidden_dim2, input_dim)
+        # self.fc2 = nn.Linear(hidden_dim1, hidden_dim2)
+        self.fc3 = nn.Linear(hidden_dim1, input_dim)
         self.relu = nn.ReLU()
 
         self.sigmas = nn.Parameter(sigma_init_X)
@@ -26,7 +26,7 @@ class HSICNetGumbelSoftmax(nn.Module):
 
     def forward(self, x):
         x = self.relu(self.fc1(x))
-        x = self.relu(self.fc2(x))
+        # x = self.relu(self.fc2(x))
         logits = self.fc3(x)
 
         # Apply Gumbel-Softmax sampling with 5 samples and temperature of 1
