@@ -13,9 +13,7 @@ import pickle
 import openpyxl
 from openpyxl import load_workbook
 from pathlib import Path
-
 import matplotlib.pyplot as plt 
-
 from tabular_datasets import * 
 from hsic_gumbelsparsemax import *
 from hsic_gumbelsoftmax import *
@@ -111,8 +109,6 @@ def call_UnbiasedShap(imputer, X_tbx , X_sample_no):
 
       
 def call_Maple(maple_explainer, X_tbx ):
-   
-    
     maple_values = np.empty_like(X_tbx)
    
     for i in range(X_tbx.shape[0]):
@@ -146,26 +142,18 @@ def call_HSIC_methods(method_name, X_tensor, y_tensor,  feature_imp):
     sigmas = model.sigmas
     sigma_y = model.sigma_y
     weights = model.importance_weights
+    
 
     return model , sigmas, sigma_y, weights
 
-def call_invase_model(model, X_df, y_series):
-    #Invasive #retrun feature importance
-
-    Invase_explainer = INVASE (model, X_df, y_series, n_epoch=1000, prefit=True) #prefit = False to train the model
-                     
-    return Invase_explainer
 
 if __name__=='__main__':
    
-    excel_path_feature_removal = Path(f'tabular_feature_removal.xlsx')
-    excel_path_feature_removal_normalized = Path(f'tabular_feature_removal_normalized.xlsx')
-    
-    
-
     #miles_per_gallon(), stackloos()
     # datasets = [diabetes(), california_housing(), extramarital_affairs(), mode_choice(),  statlog_heart(), credit_approval(), heart_mortality()]  
-    datasets = [diabetes()]
+    datasets = [diabetes(), california_housing(), extramarital_affairs(), mode_choice(),  statlog_heart(), credit_approval()]  
+
+    # datasets = [diabetes()]
 
     sampleNo_tbx = 50
 
@@ -174,10 +162,10 @@ if __name__=='__main__':
         # Loading data
         X, y, db_name, mode = data
         print(db_name)
-        # Split the data into training and test sets
+       
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
         n_train, d = X_train.shape
-        input_dim = d # number of features for the synthesized instances
+        input_dim = d 
         hidden_dim1 = 100
         hidden_dim2 = 100
         BATCH_SIZE =1000
@@ -257,17 +245,28 @@ if __name__=='__main__':
 
                 l_gsp_shap_values, _ = gumbelsparsemax_model.instancewise_shapley_value(X_tensor_bg, y_tensor_bg, X_tensor_tbx, y_tensor_tbx , gsp_sigmas, gsp_sigma_y, gsp_weights)
                 hsic_gsp_shap_values = l_gsp_shap_values.detach().cpu().numpy()
-               
 
+                l_gsp_scores, _, _ = gumbelsparsemax_model.predict(X_tensor_tbx)
+                hsic_gsp_scores = l_gsp_scores.detach().cpu().numpy()
+                ##---------------
                 l_gsp_shap_values2, _ = gumbelsparsemax_model2.instancewise_shapley_value(X_tensor_bg, y_tensor_bg, X_tensor_tbx, y_tensor_tbx , gsp_sigmas2, gsp_sigma_y2, gsp_weights2)
                 hsic_gsp_shap_values2 = l_gsp_shap_values2.detach().cpu().numpy()
 
+                l_gsp_scores2, _, _ = gumbelsparsemax_model2.predict(X_tensor_tbx)
+                hsic_gsp_scores2 = l_gsp_scores2.detach().cpu().numpy()
+                ##--------------------
                 l_gso_shap_values, _ = gumbelsoftmax_model.instancewise_shapley_value(X_tensor_bg, y_tensor_bg, X_tensor_tbx, y_tensor_tbx,   gso_sigmas, gso_sigma_y, gso_weights)
                 hsic_gso_shap_values = l_gso_shap_values.detach().cpu().numpy()
 
+                l_gso_scores, _, _ = gumbelsoftmax_model.predict(X_tensor_tbx)
+                hsic_gso_scores = l_gso_scores.detach().cpu().numpy()
+                ##------------------
                 l_sp_shap_values, _ = sparsemax_model.instancewise_shapley_value(X_tensor_bg, y_tensor_bg, X_tensor_tbx, y_tensor_tbx , sp_sigmas, sp_sigma_y, sp_weights)
                 hsic_sp_shap_values = l_sp_shap_values.detach().cpu().numpy()
-                
+
+                l_sp_scores, _, _ = sparsemax_model.predict(X_tensor_tbx)
+                hsic_sp_scores = l_sp_scores.detach().cpu().numpy()
+                ##----------------------
                 L2X_scores = L2X_explainer.predict(X_tbx, verbose=1, batch_size=BATCH_SIZE)
                 
                 # invase_scores = (Invase_explainer.explain(X_df_tbx)).to_numpy()     
@@ -282,6 +281,12 @@ if __name__=='__main__':
                 gsp_removal_effect2, gsp_removal_effect_normalized2, gsp_y_gt2 = feature_removing_effect(hsic_gsp_shap_values2, X_tbx, X_bg, exp_func, remove_feature)
                 gso_removal_effect, gso_removal_effect_normalized, gso_y_gt = feature_removing_effect(hsic_gso_shap_values, X_tbx, X_bg, exp_func, remove_feature)
                 sp_removal_effect, sp_removal_effect_normalized, sp_y_gt = feature_removing_effect(hsic_sp_shap_values, X_tbx, X_bg, exp_func, remove_feature)
+
+                gsp_score_removal_effect, gsp_score_removal_effect_normalized, _ = feature_removing_effect(hsic_gsp_scores, X_tbx, X_bg, exp_func, remove_feature)
+                gsp_score_removal_effect2, gsp_score_removal_effect_normalized2, _ = feature_removing_effect(hsic_gsp_scores2, X_tbx, X_bg, exp_func, remove_feature)
+                gso_score_removal_effect, gso_score_removal_effect_normalized, _ = feature_removing_effect(hsic_gso_scores, X_tbx, X_bg, exp_func, remove_feature)
+                sp_score_removal_effect, sp_score_removal_effect_normalized, _ = feature_removing_effect(hsic_sp_scores, X_tbx, X_bg, exp_func, remove_feature)
+
                 L2X_removal_effect, L2X_removal_effect_normalized, L2X_y_gt = feature_removing_effect(L2X_scores, X_tbx, X_bg, exp_func, remove_feature)
                 # invase_removal_effect, invase_removal_effect_normalized, invase_y_gt = feature_removing_effect(invase_scores, X_tbx, X_bg, exp_func, remove_feature)
                 shap_removal_effect, shap_removal_effect_normalized, shap_y_gt = feature_removing_effect(shap_values, X_tbx, X_bg, exp_func, remove_feature)
@@ -293,11 +298,15 @@ if __name__=='__main__':
 
     ##---------------------------------------------------------------------------------------------------------
      
-            ## Saving the feature removal effect
+        ## Saving the feature removal effect
+        excel_path_feature_removal = Path(f'tabular_feature_removal.xlsx')
+        excel_path_scores_feature_removal = Path(f'tabular_scores_feature_removal.xlsx')
+    
 
         method_names = [
-            'Hsic_GumbelSparsemax', 'Hsic_GumbelSparsemax2', 'Hsic_GumbelSoftmax',
-            'Hsic_Sparsemax', 'L2X', 'Kernel SHAP', 'Unbiased SHAP', 'Bivariate SHAP',
+            'Hsic_GumbelSparsemax', 'Hsic_GumbelSparsemax_scores','Hsic_GumbelSparsemax2', 'Hsic_GumbelSparsemax2_scores',
+            'Hsic_GumbelSoftmax', 'Hsic_GumbelSoftmax_scores', 'Hsic_Sparsemax', 'Hsic_Sparsemax_scores',
+            'L2X', 'Kernel SHAP', 'Unbiased SHAP', 'Bivariate SHAP',
             'LIME', 'MAPLE'
         ]
 
@@ -311,9 +320,13 @@ if __name__=='__main__':
         # Collect the mean and std arrays separately
         mean_results = [
             np.mean(gsp_removal_effect, axis=0),
+            np.mean(gsp_score_removal_effect, axis=0),
             np.mean(gsp_removal_effect2, axis=0),
+            np.mean(gsp_score_removal_effect2, axis=0),
             np.mean(gso_removal_effect, axis=0),
+            np.mean(gso_score_removal_effect, axis=0),
             np.mean(sp_removal_effect, axis=0),
+            np.mean(sp_score_removal_effect, axis=0),
             np.mean(L2X_removal_effect, axis=0),
             np.mean(shap_removal_effect, axis=0),
             np.mean(ushap_removal_effect, axis=0),
@@ -324,9 +337,13 @@ if __name__=='__main__':
 
         std_results = [
             np.std(gsp_removal_effect, axis=0),
+            np.std(gsp_score_removal_effect, axis=0),
             np.std(gsp_removal_effect2, axis=0),
+            np.std(gsp_score_removal_effect2, axis=0),
             np.std(gso_removal_effect, axis=0),
+            np.std(gso_score_removal_effect, axis=0),
             np.std(sp_removal_effect, axis=0),
+            np.std(sp_score_removal_effect, axis=0),
             np.std(L2X_removal_effect, axis=0),
             np.std(shap_removal_effect, axis=0),
             np.std(ushap_removal_effect, axis=0),
@@ -343,15 +360,19 @@ if __name__=='__main__':
             interleaved[1::2] = std    # Std values go in odd indices
             all_results.append(interleaved)
 
-        # Convert to DataFrame
+   
         df = pd.DataFrame(all_results, index=method_names, columns=column_header)
 
         # Collect the normalized mean and std arrays separately (normalized results)
         mean_results_normalized = [
             np.mean(gsp_removal_effect_normalized, axis=0),
+            np.mean(gsp_score_removal_effect_normalized, axis=0),
             np.mean(gsp_removal_effect_normalized2, axis=0),
+            np.mean(gsp_score_removal_effect_normalized2, axis=0),
             np.mean(gso_removal_effect_normalized, axis=0),
+            np.mean(gso_score_removal_effect_normalized, axis=0),
             np.mean(sp_removal_effect_normalized, axis=0),
+            np.mean(sp_score_removal_effect_normalized, axis=0),
             np.mean(L2X_removal_effect_normalized, axis=0),
             np.mean(shap_removal_effect_normalized, axis=0),
             np.mean(ushap_removal_effect_normalized, axis=0),
@@ -362,9 +383,13 @@ if __name__=='__main__':
 
         std_results_normalized = [
             np.std(gsp_removal_effect_normalized, axis=0),
+            np.std(gsp_score_removal_effect_normalized, axis=0),
             np.std(gsp_removal_effect_normalized2, axis=0),
+            np.std(gsp_score_removal_effect_normalized2, axis=0),
             np.std(gso_removal_effect_normalized, axis=0),
+            np.std(gso_score_removal_effect_normalized, axis=0),
             np.std(sp_removal_effect_normalized, axis=0),
+             np.std(sp_score_removal_effect_normalized, axis=0),
             np.std(L2X_removal_effect_normalized, axis=0),
             np.std(shap_removal_effect_normalized, axis=0),
             np.std(ushap_removal_effect_normalized, axis=0),
@@ -382,7 +407,7 @@ if __name__=='__main__':
             interleaved[1::2] = std    # Std values go in odd indices
             normalized_all_results.append(interleaved)
 
-        # Convert normalized results to DataFrame
+  
         df_normalized = pd.DataFrame(normalized_all_results, index=method_names, columns=column_header)
 
         ### Now save both DataFrames to Excel with a gap of 2 rows ###
@@ -400,7 +425,7 @@ if __name__=='__main__':
                 sheet_name = f"{sheet_name}_{counter}"
                 counter += 1
 
-            # Create an initial dataframe to hold the "y diff" label
+            
             df_y_diff = pd.DataFrame(['y diff'], index=[0], columns=[None])
             
             # Write the "y diff" label
@@ -423,7 +448,8 @@ if __name__=='__main__':
         print("done!")
 
 
-
+        ##------------------------------------------------------------------------------------------------------------------------------------------------------
+        ##save Y-real
         methods_data = {
             'Hsic_GumbelSparsemax': gsp_y_gt,
             'Hsic_GumbelSparsemax2': gsp_y_gt2,
@@ -439,14 +465,14 @@ if __name__=='__main__':
 
         y_results = 'y_real'
 
-        # Define the folder where the files will be saved (ensure the folder exists)
-        save_folder = os.path.join(y_results, db_name)  # Example: './results/your_dataset_name'
+       
+        save_folder = os.path.join(y_results, db_name)  
         os.makedirs(save_folder, exist_ok=True)
 
         # Choose between 'npy' or 'pickle' as the file format
         save_format = 'npy'  # Set to 'pickle' for .pickle files
 
-        # Loop through the methods and save each array to the folder
+       
         for method_name, array_data in methods_data.items():
             save_path = os.path.join(save_folder, f"{method_name}.{save_format}")
             
