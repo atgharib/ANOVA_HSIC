@@ -16,10 +16,6 @@ from openpyxl import load_workbook
 from pathlib import Path
 import matplotlib.pyplot as plt 
 from tabular_datasets import * 
-# from hsic_gumbelsparsemax import *
-# from hsic_gumbelsoftmax import *
-# from hsic_sparsemax import *
-
 from HSICNet.HSICFeatureNet import *
 from HSICNet.HSICNet import *
 from HSICNet.util import *
